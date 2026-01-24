@@ -46,14 +46,24 @@ xdg-config-stow --rm fish
 
 ### Dry run mode
 
-Preview what changes would be made without actually making them:
+Preview what changes would be made without actually making them. Output uses colored diff-like syntax with `+` for additions and `-` for removals:
 
 ```bash
 # See what would be stowed
 xdg-config-stow --dry-run fish
+# Output:
+# DRY RUN: No changes will be made
+#
+# + config.fish -> /path/to/dotfiles/.config/fish/config.fish
+# + functions/ -> /path/to/dotfiles/.config/fish/functions
 
 # See what would be removed
 xdg-config-stow --rm --dry-run fish
+# Output:
+# DRY RUN: No changes will be made
+#
+# - config.fish
+# - functions/
 ```
 
 ### Ignoring files

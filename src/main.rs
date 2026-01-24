@@ -1,5 +1,6 @@
 use anyhow::{Context, Result, anyhow};
 use clap::Parser;
+use colored::Colorize;
 use std::fs;
 use xdg_config_stow::{get_xdg_config_home, load_ignore_rules, remove_package, stow_package};
 
@@ -54,7 +55,7 @@ fn main() -> Result<()> {
     let gitignore = load_ignore_rules(&package_source)?;
 
     if args.dry_run {
-        println!("DRY RUN: No changes will be made\n");
+        println!("{}\n", "DRY RUN: No changes will be made".yellow().bold());
     }
 
     if args.rm {
