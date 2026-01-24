@@ -32,8 +32,9 @@ cargo test test_stow_single_file
 
 ### Integration Tests (tests/integration_tests.rs)
 
-**9 tests** testing the CLI end-to-end:
+**15 tests** testing the CLI end-to-end:
 
+#### Basic Functionality
 1. `test_missing_config_directory` - Error handling when .config doesn't exist
 2. `test_missing_package` - Error handling for non-existent packages
 3. `test_stow_and_remove_package` - Full workflow of stowing and removing
@@ -44,12 +45,20 @@ cargo test test_stow_single_file
 8. `test_complex_directory_structure` - Deeply nested directory structures
 9. `test_xdg_config_home_resolution` - Custom XDG_CONFIG_HOME handling
 
+#### Automatic Migration Tests (Safety-Critical)
+10. `test_directory_symlink_migration` - Auto-migration from package symlink to individual symlinks when .stowignore is added
+11. `test_directory_to_file_symlinks_migration` - Migration with subdirectory ignore rules
+12. `test_migration_safety_wrong_symlink` - **Safety**: Ensures migration ONLY happens when symlink points to correct source
+13. `test_migration_with_conflicting_file` - **Safety**: Detects conflicts when target directory exists (not a symlink)
+14. `test_migration_preserves_correct_symlinks` - **Safety**: Verifies all symlinks are correctly created after migration
+15. `test_no_migration_when_not_needed` - **Safety**: Ensures no migration attempt when target isn't a package symlink
+
 ## Test Results
 
 ```
 Unit tests:      8 passed
-Integration:     9 passed
-Total:          17 passed
+Integration:    15 passed
+Total:          23 passed
 ```
 
 ## What's Tested
@@ -76,6 +85,14 @@ Total:          17 passed
 - ✅ Idempotent operations (re-stowing same package)
 - ✅ Complex nested directory structures
 - ✅ Platform-specific path handling (macOS /var symlink)
+
+### Migration Safety (NEW)
+- ✅ Automatic migration from package-level symlinks to individual symlinks
+- ✅ Migration only occurs when symlink points to correct source
+- ✅ Conflict detection prevents unsafe migrations
+- ✅ Symlink verification after migration
+- ✅ No unnecessary migrations when target is already correct
+- ✅ Proper handling of subdirectory ignore rules during migration
 
 ## CI/CD
 

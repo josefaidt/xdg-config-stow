@@ -11,7 +11,7 @@ struct Args {
     package: String,
 
     /// Remove stowed package instead of creating symlinks
-    #[arg(short, long)]
+    #[arg(long)]
     rm: bool,
 }
 

@@ -1,0 +1,10 @@
+{
+  "name": "cargo-fmt",
+  "description": "Run cargo fmt on Rust files when saved",
+  "trigger": {
+    "type": "file_change",
+    "patterns": ["**/*.rs"],
+    "actions": ["Write"]
+  },
+  "command": "cargo fmt --manifest-path $(git rev-parse --show-toplevel)/Cargo.toml"
+}

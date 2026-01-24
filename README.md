@@ -1,6 +1,6 @@
 # xdg-config-stow
 
-An XDG-centric GNU stow replacement for managing dotfiles, written in Rust.
+An [XDG](https://specifications.freedesktop.org/basedir/latest/)-centric GNU stow replacement for managing dotfiles, written in Rust.
 
 ## Features
 
@@ -11,8 +11,10 @@ An XDG-centric GNU stow replacement for managing dotfiles, written in Rust.
 
 ## Installation
 
+Install from crates.io:
+
 ```bash
-cargo install --path .
+cargo install xdg-config-stow
 ```
 
 Or build from source:
@@ -40,8 +42,6 @@ Remove symlinks for a previously stowed package:
 
 ```bash
 xdg-config-stow --rm fish
-# or
-xdg-config-stow -r fish
 ```
 
 ### Ignoring files
@@ -54,6 +54,12 @@ completions/
 
 # Ignore specific files
 fish_variables
+```
+
+**Note**: If you add a `.stowignore` file after initially stowing a package, simply re-run the stow command to automatically update the symlinks:
+
+```bash
+xdg-config-stow fish  # Automatically migrates and respects new ignore rules
 ```
 
 ## Example Directory Structure
@@ -107,12 +113,31 @@ See [TESTS.md](TESTS.md) for detailed test coverage information.
 
 ### Test Coverage
 
-- **17 total tests** covering:
+- **23 total tests** covering:
   - Core stowing/unstowing functionality
   - .stowignore pattern matching
   - Error handling and edge cases
   - XDG_CONFIG_HOME resolution
   - Complex directory structures
+  - **Automatic migration safety** (6 dedicated safety tests)
+
+## Contributing
+
+Contributions are welcome! Before submitting a pull request:
+
+1. Ensure your code is properly formatted: `cargo fmt`
+2. Check for linting issues: `cargo clippy -- -D warnings`
+3. Run all tests: `cargo test`
+
+### Git Hooks (Optional)
+
+To automatically run these checks before every commit, you can set up git hooks:
+
+```bash
+./scripts/setup-hooks.sh
+```
+
+This will install a pre-commit hook that runs formatting checks, clippy, and tests before allowing commits. You can bypass the hook when needed with `git commit --no-verify`.
 
 ## License
 

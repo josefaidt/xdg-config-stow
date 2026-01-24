@@ -1,0 +1,48 @@
+#!/bin/bash
+# Pre-commit hook for xdg-config-stow
+# Runs formatting, linting, and tests before allowing commits
+
+set -e
+
+echo "Running pre-commit checks..."
+
+# Check if cargo is available
+if ! command -v cargo &> /dev/null; then
+    echo "Error: cargo not found. Please install Rust."
+    exit 1
+fi
+
+# Run cargo fmt check
+echo "1/3 Checking code formatting..."
+if ! cargo fmt -- --check; then
+    echo ""
+    echo "❌ Formatting check failed!"
+    echo "   Run 'cargo fmt' to fix formatting issues."
+    exit 1
+fi
+echo "✓ Formatting check passed"
+
+# Run clippy
+echo ""
+echo "2/3 Running clippy..."
+if ! cargo clippy -- -D warnings; then
+    echo ""
+    echo "❌ Clippy check failed!"
+    echo "   Fix the warnings above before committing."
+    exit 1
+fi
+echo "✓ Clippy check passed"
+
+# Run tests
+echo ""
+echo "3/3 Running tests..."
+if ! cargo test --quiet; then
+    echo ""
+    echo "❌ Tests failed!"
+    echo "   Fix the failing tests before committing."
+    exit 1
+fi
+echo "✓ Tests passed"
+
+echo ""
+echo "✓ All pre-commit checks passed!"

@@ -64,8 +64,6 @@ xdg-config-stow fish
 
 # Remove stowed fish config (removes symlinks)
 xdg-config-stow --rm fish
-# or
-xdg-config-stow -r fish
 ```
 
 ### Using .stowignore
