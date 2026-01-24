@@ -88,7 +88,7 @@ my-dotfiles-repo/
 
 ## Requirements
 
-- Rust 1.70 or later (for building)
+- Rust 1.85 or later (for building)
 - Unix-like operating system (Linux, macOS, BSD)
 - Write access to `XDG_CONFIG_HOME` or `$HOME/.config`
 

@@ -2,6 +2,7 @@
 name = "xdg-config-stow"
 version = "0.1.4"
 edition = "2024"
+rust-version = "1.85"
 authors = ["Josef Aidt <josef.aidt@example.com>"]
 description = "XDG-centric GNU stow replacement for dotfile management"
 license = "MIT"
