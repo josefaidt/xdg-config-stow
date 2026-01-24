@@ -95,10 +95,10 @@ pub fn stow_package(
             }
         } else {
             // Create parent directory if needed
-            if let Some(parent) = target_path.parent() {
-                if !parent.exists() {
-                    fs::create_dir_all(parent)?;
-                }
+            if let Some(parent) = target_path.parent()
+                && !parent.exists()
+            {
+                fs::create_dir_all(parent)?;
             }
 
             // Check if symlink already exists
@@ -210,14 +210,14 @@ pub fn remove_empty_dirs(dir: &Path) -> Result<()> {
     }
 
     // First, recursively process subdirectories
-    if dir.is_dir() {
-        if let Ok(entries) = fs::read_dir(dir) {
-            for entry in entries.flatten() {
-                let path = entry.path();
-                if path.is_dir() {
-                    // Recursively try to remove subdirectories
-                    let _ = remove_empty_dirs(&path);
-                }
+    if dir.is_dir()
+        && let Ok(entries) = fs::read_dir(dir)
+    {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                // Recursively try to remove subdirectories
+                let _ = remove_empty_dirs(&path);
             }
         }
     }
