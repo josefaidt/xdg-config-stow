@@ -13,6 +13,10 @@ struct Args {
     /// Remove stowed package instead of creating symlinks
     #[arg(long)]
     rm: bool,
+
+    /// Show what would be done without making any changes
+    #[arg(long)]
+    dry_run: bool,
 }
 
 fn main() -> Result<()> {
@@ -49,12 +53,20 @@ fn main() -> Result<()> {
     // Load ignore rules if .stowignore exists
     let gitignore = load_ignore_rules(&package_source)?;
 
+    if args.dry_run {
+        println!("DRY RUN: No changes will be made\n");
+    }
+
     if args.rm {
-        remove_package(&package_source, &target_package, gitignore.as_ref())?;
-        println!("Successfully removed package '{}'", args.package);
+        remove_package(&package_source, &target_package, gitignore.as_ref(), args.dry_run)?;
+        if !args.dry_run {
+            println!("Successfully removed package '{}'", args.package);
+        }
     } else {
-        stow_package(&package_source, &target_package, gitignore.as_ref())?;
-        println!("Successfully stowed package '{}'", args.package);
+        stow_package(&package_source, &target_package, gitignore.as_ref(), args.dry_run)?;
+        if !args.dry_run {
+            println!("Successfully stowed package '{}'", args.package);
+        }
     }
 
     Ok(())

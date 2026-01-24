@@ -229,6 +229,7 @@ fn migrate_directory_symlink(
     target_dir: &Path,
     _source_root: &Path,
     _gitignore: Option<&ignore::gitignore::Gitignore>,
+    dry_run: bool,
 ) -> Result<()> {
     // Check if target is a symlink pointing to our source
     if target_dir.is_symlink()
@@ -240,9 +241,14 @@ fn migrate_directory_symlink(
             target_dir.display()
         );
         // Remove the directory symlink
-        fs::remove_file(target_dir)?;
-        // Create as real directory and stow contents
-        fs::create_dir_all(target_dir)?;
+        if dry_run {
+            println!("  Would remove directory symlink: {}", target_dir.display());
+            println!("  Would create directory: {}", target_dir.display());
+        } else {
+            fs::remove_file(target_dir)?;
+            // Create as real directory and stow contents
+            fs::create_dir_all(target_dir)?;
+        }
     }
 
     Ok(())
@@ -253,6 +259,7 @@ pub fn stow_package(
     source: &Path,
     target: &Path,
     gitignore: Option<&ignore::gitignore::Gitignore>,
+    dry_run: bool,
 ) -> Result<()> {
     let package_name = source
         .file_name()
@@ -303,20 +310,28 @@ pub fn stow_package(
         if let Some(parent) = target.parent()
             && !parent.exists()
         {
-            fs::create_dir_all(parent).context("Failed to create parent directory")?;
+            if dry_run {
+                println!("  Would create parent directory: {}", parent.display());
+            } else {
+                fs::create_dir_all(parent).context("Failed to create parent directory")?;
+            }
         }
 
         // Create symlink to entire package directory
-        #[cfg(unix)]
-        std::os::unix::fs::symlink(source, target).context(format!(
-            "Failed to create package symlink: {}",
-            target.display()
-        ))?;
+        if dry_run {
+            println!("  Would link package directory: {}/ -> {}", package_name, source.display());
+        } else {
+            #[cfg(unix)]
+            std::os::unix::fs::symlink(source, target).context(format!(
+                "Failed to create package symlink: {}",
+                target.display()
+            ))?;
 
-        #[cfg(windows)]
-        std::os::windows::fs::symlink_dir(source, target)?;
+            #[cfg(windows)]
+            std::os::windows::fs::symlink_dir(source, target)?;
 
-        println!("  Linked package directory: {}/", package_name);
+            println!("  Linked package directory: {}/", package_name);
+        }
         return Ok(());
     }
 
@@ -333,11 +348,20 @@ pub fn stow_package(
             package_name
         );
         // Remove the package-level symlink
-        fs::remove_file(target)?;
-        // Create as real directory
-        fs::create_dir_all(target)?;
+        if dry_run {
+            println!("  Would remove package symlink: {}", target.display());
+            println!("  Would create directory: {}", target.display());
+        } else {
+            fs::remove_file(target)?;
+            // Create as real directory
+            fs::create_dir_all(target)?;
+        }
     } else if !target.exists() {
-        fs::create_dir_all(target).context("Failed to create target directory")?;
+        if dry_run {
+            println!("  Would create directory: {}", target.display());
+        } else {
+            fs::create_dir_all(target).context("Failed to create target directory")?;
+        }
     }
 
     // Check for conflicts first
@@ -370,10 +394,10 @@ pub fn stow_package(
     }
 
     // Migrate from directory symlinks if needed (for subdirectories)
-    migrate_directory_symlink(source, target, source, gitignore)?;
+    migrate_directory_symlink(source, target, source, gitignore, dry_run)?;
 
     // Stow contents
-    stow_directory_contents(source, target, source, gitignore)?;
+    stow_directory_contents(source, target, source, gitignore, dry_run)?;
 
     Ok(())
 }
@@ -384,11 +408,16 @@ fn stow_directory_contents(
     target_dir: &Path,
     source_root: &Path,
     gitignore: Option<&ignore::gitignore::Gitignore>,
+    dry_run: bool,
 ) -> Result<()> {
     // Create target directory if it doesn't exist
     if !target_dir.exists() {
-        fs::create_dir_all(target_dir)?;
-        println!("  Created directory: {}", target_dir.display());
+        if dry_run {
+            println!("  Would create directory: {}", target_dir.display());
+        } else {
+            fs::create_dir_all(target_dir)?;
+            println!("  Created directory: {}", target_dir.display());
+        }
     }
 
     for entry in fs::read_dir(source_dir)? {
@@ -422,18 +451,22 @@ fn stow_directory_contents(
                 }
 
                 if !target_path.exists() {
-                    #[cfg(unix)]
-                    std::os::unix::fs::symlink(&path, &target_path)?;
+                    if dry_run {
+                        println!("  Would link directory: {}/ -> {}", relative_path.display(), path.display());
+                    } else {
+                        #[cfg(unix)]
+                        std::os::unix::fs::symlink(&path, &target_path)?;
 
-                    #[cfg(windows)]
-                    std::os::windows::fs::symlink_dir(&path, &target_path)?;
+                        #[cfg(windows)]
+                        std::os::windows::fs::symlink_dir(&path, &target_path)?;
 
-                    println!("  Linked directory: {}/", relative_path.display());
+                        println!("  Linked directory: {}/", relative_path.display());
+                    }
                 }
             } else {
                 // Need to recurse
-                migrate_directory_symlink(&path, &target_path, source_root, gitignore)?;
-                stow_directory_contents(&path, &target_path, source_root, gitignore)?;
+                migrate_directory_symlink(&path, &target_path, source_root, gitignore, dry_run)?;
+                stow_directory_contents(&path, &target_path, source_root, gitignore, dry_run)?;
             }
         } else {
             if target_path.is_symlink()
@@ -445,13 +478,17 @@ fn stow_directory_contents(
             }
 
             if !target_path.exists() {
-                #[cfg(unix)]
-                std::os::unix::fs::symlink(&path, &target_path)?;
+                if dry_run {
+                    println!("  Would link: {} -> {}", relative_path.display(), path.display());
+                } else {
+                    #[cfg(unix)]
+                    std::os::unix::fs::symlink(&path, &target_path)?;
 
-                #[cfg(windows)]
-                std::os::windows::fs::symlink_file(&path, &target_path)?;
+                    #[cfg(windows)]
+                    std::os::windows::fs::symlink_file(&path, &target_path)?;
 
-                println!("  Linked: {}", relative_path.display());
+                    println!("  Linked: {}", relative_path.display());
+                }
             }
         }
     }
@@ -464,6 +501,7 @@ pub fn remove_package(
     source: &Path,
     target: &Path,
     gitignore: Option<&ignore::gitignore::Gitignore>,
+    dry_run: bool,
 ) -> Result<()> {
     if !target.exists() {
         return Err(anyhow!(
@@ -482,11 +520,15 @@ pub fn remove_package(
         && let Ok(link_target) = fs::read_link(target)
         && link_target == source
     {
-        fs::remove_file(target).context(format!(
-            "Failed to remove package symlink: {}",
-            target.display()
-        ))?;
-        println!("  Removed package symlink: {}/", package_name);
+        if dry_run {
+            println!("  Would remove package symlink: {}/", package_name);
+        } else {
+            fs::remove_file(target).context(format!(
+                "Failed to remove package symlink: {}",
+                target.display()
+            ))?;
+            println!("  Removed package symlink: {}/", package_name);
+        }
         return Ok(());
     }
 
@@ -524,17 +566,25 @@ pub fn remove_package(
             // Verify it points to our source before removing
             let link_target = fs::read_link(&target_path)?;
             if link_target == path {
-                fs::remove_file(&target_path).context(format!(
-                    "Failed to remove symlink: {}",
-                    target_path.display()
-                ))?;
-                println!("  Removed: {}", relative_path.display());
+                if dry_run {
+                    println!("  Would remove: {}", relative_path.display());
+                } else {
+                    fs::remove_file(&target_path).context(format!(
+                        "Failed to remove symlink: {}",
+                        target_path.display()
+                    ))?;
+                    println!("  Removed: {}", relative_path.display());
+                }
             }
         }
     }
 
     // Try to remove empty directories
-    remove_empty_dirs(target)?;
+    if !dry_run {
+        remove_empty_dirs(target)?;
+    } else {
+        println!("  Would remove empty directories");
+    }
 
     Ok(())
 }
@@ -586,7 +636,7 @@ mod tests {
         fs::create_dir_all(&source).unwrap();
         fs::write(source.join("test.txt"), "hello").unwrap();
 
-        stow_package(&source, &target, None).unwrap();
+        stow_package(&source, &target, None, false).unwrap();
 
         // With no ignore rules, entire package directory should be symlinked
         assert!(target.is_symlink());
@@ -604,7 +654,7 @@ mod tests {
         fs::write(source.join("file1.txt"), "content1").unwrap();
         fs::write(source.join("subdir/file2.txt"), "content2").unwrap();
 
-        stow_package(&source, &target, None).unwrap();
+        stow_package(&source, &target, None, false).unwrap();
 
         // With no ignore rules, the entire package directory should be symlinked
         assert!(target.is_symlink());
@@ -621,10 +671,10 @@ mod tests {
         fs::create_dir_all(&source).unwrap();
         fs::write(source.join("test.txt"), "hello").unwrap();
 
-        stow_package(&source, &target, None).unwrap();
+        stow_package(&source, &target, None, false).unwrap();
         assert!(target.is_symlink());
 
-        remove_package(&source, &target, None).unwrap();
+        remove_package(&source, &target, None, false).unwrap();
         assert!(!target.exists());
     }
 
@@ -640,7 +690,7 @@ mod tests {
         fs::write(source.join(".stowignore"), "ignore.txt").unwrap();
 
         let gitignore = load_ignore_rules(&source).unwrap();
-        stow_package(&source, &target, gitignore.as_ref()).unwrap();
+        stow_package(&source, &target, gitignore.as_ref(), false).unwrap();
 
         assert!(target.join("include.txt").is_symlink());
         assert!(!target.join("ignore.txt").exists());
@@ -656,9 +706,9 @@ mod tests {
         fs::write(source.join("test.txt"), "hello").unwrap();
 
         // Stow twice - should not error
-        stow_package(&source, &target, None).unwrap();
+        stow_package(&source, &target, None, false).unwrap();
         assert!(target.is_symlink());
-        let result = stow_package(&source, &target, None);
+        let result = stow_package(&source, &target, None, false);
         assert!(result.is_ok());
     }
 
@@ -673,7 +723,7 @@ mod tests {
         fs::write(source.join("test.txt"), "hello").unwrap();
         fs::write(target.join("test.txt"), "existing").unwrap();
 
-        let result = stow_package(&source, &target, None);
+        let result = stow_package(&source, &target, None, false);
         assert!(result.is_err());
         // With package-level symlinking, when target exists as a directory, we get "Target directory exists"
         assert!(result.unwrap_err().to_string().contains("directory exists"));
@@ -688,10 +738,10 @@ mod tests {
         fs::create_dir_all(source.join("subdir")).unwrap();
         fs::write(source.join("subdir/file.txt"), "content").unwrap();
 
-        stow_package(&source, &target, None).unwrap();
+        stow_package(&source, &target, None, false).unwrap();
         assert!(target.is_symlink());
 
-        remove_package(&source, &target, None).unwrap();
+        remove_package(&source, &target, None, false).unwrap();
         assert!(!target.exists());
     }
 
@@ -708,7 +758,7 @@ mod tests {
         fs::write(source.join(".stowignore"), "ignore/").unwrap();
 
         let gitignore = load_ignore_rules(&source).unwrap();
-        stow_package(&source, &target, gitignore.as_ref()).unwrap();
+        stow_package(&source, &target, gitignore.as_ref(), false).unwrap();
 
         // With ignore rules, we can't symlink the whole package, so stow contents
         assert!(target.is_dir());

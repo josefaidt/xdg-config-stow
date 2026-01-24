@@ -44,6 +44,18 @@ Remove symlinks for a previously stowed package:
 xdg-config-stow --rm fish
 ```
 
+### Dry run mode
+
+Preview what changes would be made without actually making them:
+
+```bash
+# See what would be stowed
+xdg-config-stow --dry-run fish
+
+# See what would be removed
+xdg-config-stow --rm --dry-run fish
+```
+
 ### Ignoring files
 
 Create a `.stowignore` file inside your package directory (e.g., `.config/fish/.stowignore`) using gitignore syntax:
