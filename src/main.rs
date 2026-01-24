@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use clap::Parser;
 use std::fs;
 use xdg_config_stow::{get_xdg_config_home, load_ignore_rules, remove_package, stow_package};

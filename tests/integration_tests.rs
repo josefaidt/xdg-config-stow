@@ -76,7 +76,10 @@ fn test_stow_and_remove_package() {
     // Verify symlink targets are correct (canonicalize to handle macOS /var -> /private/var symlink)
     let link = fs::read_link(target.join("fish/config.fish")).unwrap();
     let link_canonical = link.canonicalize().unwrap();
-    let expected_canonical = dotfiles.join(".config/fish/config.fish").canonicalize().unwrap();
+    let expected_canonical = dotfiles
+        .join(".config/fish/config.fish")
+        .canonicalize()
+        .unwrap();
     assert_eq!(link_canonical, expected_canonical);
 
     // Remove the package
@@ -88,7 +91,11 @@ fn test_stow_and_remove_package() {
         .output()
         .unwrap();
 
-    assert!(output.status.success(), "Remove command failed: {:?}", output);
+    assert!(
+        output.status.success(),
+        "Remove command failed: {:?}",
+        output
+    );
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("Successfully removed package 'fish'"));
 
@@ -111,11 +118,7 @@ fn test_stow_with_ignore_file() {
         "# custom completion",
     )
     .unwrap();
-    fs::write(
-        dotfiles.join(".config/fish/fish_variables"),
-        "# variables",
-    )
-    .unwrap();
+    fs::write(dotfiles.join(".config/fish/fish_variables"), "# variables").unwrap();
 
     // Create .stowignore file
     fs::write(

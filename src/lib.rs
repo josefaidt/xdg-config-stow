@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use ignore::gitignore::GitignoreBuilder;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -336,7 +336,12 @@ mod tests {
 
         let result = stow_package(&source, &target, None);
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Target already exists"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("Target already exists")
+        );
     }
 
     #[test]
