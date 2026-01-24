@@ -319,7 +319,11 @@ pub fn stow_package(
 
         // Create symlink to entire package directory
         if dry_run {
-            println!("  Would link package directory: {}/ -> {}", package_name, source.display());
+            println!(
+                "  Would link package directory: {}/ -> {}",
+                package_name,
+                source.display()
+            );
         } else {
             #[cfg(unix)]
             std::os::unix::fs::symlink(source, target).context(format!(
@@ -452,7 +456,11 @@ fn stow_directory_contents(
 
                 if !target_path.exists() {
                     if dry_run {
-                        println!("  Would link directory: {}/ -> {}", relative_path.display(), path.display());
+                        println!(
+                            "  Would link directory: {}/ -> {}",
+                            relative_path.display(),
+                            path.display()
+                        );
                     } else {
                         #[cfg(unix)]
                         std::os::unix::fs::symlink(&path, &target_path)?;
@@ -479,7 +487,11 @@ fn stow_directory_contents(
 
             if !target_path.exists() {
                 if dry_run {
-                    println!("  Would link: {} -> {}", relative_path.display(), path.display());
+                    println!(
+                        "  Would link: {} -> {}",
+                        relative_path.display(),
+                        path.display()
+                    );
                 } else {
                     #[cfg(unix)]
                     std::os::unix::fs::symlink(&path, &target_path)?;

@@ -58,12 +58,22 @@ fn main() -> Result<()> {
     }
 
     if args.rm {
-        remove_package(&package_source, &target_package, gitignore.as_ref(), args.dry_run)?;
+        remove_package(
+            &package_source,
+            &target_package,
+            gitignore.as_ref(),
+            args.dry_run,
+        )?;
         if !args.dry_run {
             println!("Successfully removed package '{}'", args.package);
         }
     } else {
-        stow_package(&package_source, &target_package, gitignore.as_ref(), args.dry_run)?;
+        stow_package(
+            &package_source,
+            &target_package,
+            gitignore.as_ref(),
+            args.dry_run,
+        )?;
         if !args.dry_run {
             println!("Successfully stowed package '{}'", args.package);
         }
