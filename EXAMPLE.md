@@ -32,11 +32,11 @@ This will create symlinks from `dotfiles/.config/fish/*` to `$HOME/.config/fish/
 
 Output:
 ```
-  Created directory: functions
-  Linked: config.fish
-  Linked: functions/fish_prompt.fish
-  Created directory: completions
-  Linked: completions/custom.fish
+Created directory: functions
+Linked: config.fish
+Linked: functions/fish_prompt.fish
+Created directory: completions
+Linked: completions/custom.fish
 Successfully stowed package 'fish'
 ```
 
@@ -59,11 +59,11 @@ xdg-config-stow fish
 
 The completions directory and fish_variables file will be skipped:
 ```
-  Ignoring: completions
-  Ignoring: fish_variables
-  Created directory: functions
-  Linked: config.fish
-  Linked: functions/fish_prompt.fish
+Ignoring: completions
+Ignoring: fish_variables
+Created directory: functions
+Linked: config.fish
+Linked: functions/fish_prompt.fish
 Successfully stowed package 'fish'
 ```
 
@@ -77,10 +77,10 @@ xdg-config-stow --rm fish
 
 Output:
 ```
-  Removed: config.fish
-  Removed: functions/fish_prompt.fish
-  Removed empty directory: /Users/you/.config/fish/functions
-  Removed empty directory: /Users/you/.config/fish
+Removed: config.fish
+Removed: functions/fish_prompt.fish
+Removed empty directory: /Users/you/.config/fish/functions
+Removed empty directory: /Users/you/.config/fish
 Successfully removed package 'fish'
 ```
 
