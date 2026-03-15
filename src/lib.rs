@@ -15,6 +15,23 @@ pub fn get_xdg_config_home() -> Result<PathBuf> {
     }
 }
 
+/// Get the XDG bin home directory.
+///
+/// Derives the bin directory from XDG_DATA_HOME: since XDG_DATA_HOME defaults to
+/// `$HOME/.local/share`, the bin directory is its parent joined with "bin" —
+/// i.e. `$HOME/.local/bin`. If XDG_DATA_HOME is set to a custom path, the bin
+/// directory will be derived from that parent as well.
+pub fn get_xdg_bin_home() -> Result<PathBuf> {
+    if let Ok(xdg_data) = std::env::var("XDG_DATA_HOME") {
+        let data_path = PathBuf::from(xdg_data);
+        if let Some(parent) = data_path.parent() {
+            return Ok(parent.join("bin"));
+        }
+    }
+    let home = std::env::var("HOME").context("HOME environment variable not set")?;
+    Ok(PathBuf::from(home).join(".local").join("bin"))
+}
+
 /// Load ignore rules from .stowignore file if it exists
 pub fn load_ignore_rules(package_source: &Path) -> Result<Option<ignore::gitignore::Gitignore>> {
     let ignore_file = package_source.join(".stowignore");
@@ -352,7 +369,7 @@ pub fn stow_package(
             #[cfg(windows)]
             std::os::windows::fs::symlink_dir(source, target)?;
 
-            println!("Linked package directory: {}/", package_name);
+            println!("Linked package: {}", package_name);
         }
         return Ok(());
     }

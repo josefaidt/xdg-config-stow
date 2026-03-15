@@ -32,7 +32,7 @@ cargo test test_stow_single_file
 
 ### Integration Tests (tests/integration_tests.rs)
 
-**15 tests** testing the CLI end-to-end:
+**21 tests** testing the CLI end-to-end:
 
 #### Basic Functionality
 1. `test_missing_config_directory` - Error handling when .config doesn't exist
@@ -53,12 +53,20 @@ cargo test test_stow_single_file
 14. `test_migration_preserves_correct_symlinks` - **Safety**: Verifies all symlinks are correctly created after migration
 15. `test_no_migration_when_not_needed` - **Safety**: Ensures no migration attempt when target isn't a package symlink
 
+#### Bin Support Tests
+16. `test_stow_bin_file` - Stowing a script from .local/bin/ to $HOME/.local/bin
+17. `test_remove_bin_file` - Removing a stowed bin script
+18. `test_stow_bin_already_linked` - Idempotent bin stowing
+19. `test_xdg_data_home_bin_resolution` - Custom XDG_DATA_HOME bin directory derivation
+20. `test_bin_preferred_when_config_package_missing` - Falls back to .local/bin when not in .config
+21. `test_config_takes_priority_over_bin` - .config takes priority when name exists in both
+
 ## Test Results
 
 ```
 Unit tests:      8 passed
-Integration:    15 passed
-Total:          23 passed
+Integration:    21 passed
+Total:          29 passed
 ```
 
 ## What's Tested
@@ -69,6 +77,8 @@ Total:          23 passed
 - ✅ Removing symlinks
 - ✅ Cleaning up empty directories
 - ✅ XDG_CONFIG_HOME environment variable resolution
+- ✅ XDG_DATA_HOME-derived bin directory resolution
+- ✅ Stowing user scripts from .local/bin/
 
 ### .stowignore Support
 - ✅ Ignoring individual files

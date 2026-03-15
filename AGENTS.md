@@ -35,6 +35,8 @@ cargo test -- --nocapture  # with output
 ## Key Behaviors
 
 - Symlinks files from `.config/<package>/` into `XDG_CONFIG_HOME` (or `$HOME/.config`)
+- Symlinks files from `.local/bin/<script>` into the XDG bin directory (parent of `XDG_DATA_HOME` + `/bin`, or `$HOME/.local/bin`)
+- When a package name matches entries in both `.config/` and `.local/bin/`, `.config/` takes priority
 - Respects `.stowignore` files (gitignore-style patterns) per package
 - `--rm` flag safely removes stowed symlinks and cleans up empty directories
 - Idempotent: re-stowing an already-linked package is safe

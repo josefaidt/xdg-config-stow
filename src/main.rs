@@ -2,7 +2,7 @@ use anyhow::{Context, Result, anyhow};
 use clap::Parser;
 use colored::Colorize;
 use std::fs;
-use xdg_config_stow::{get_xdg_config_home, load_ignore_rules, remove_package, stow_package};
+use xdg_config_stow::{get_xdg_bin_home, get_xdg_config_home, load_ignore_rules, remove_package, stow_package};
 
 #[derive(Parser, Debug)]
 #[command(name = "xdg-config-stow")]
@@ -26,25 +26,39 @@ fn main() -> Result<()> {
     // Get current working directory
     let cwd = std::env::current_dir().context("Failed to get current working directory")?;
 
-    // Check for .config directory in current directory
+    // Check for .config or .local/bin directory in current directory
     let config_dir = cwd.join(".config");
-    if !config_dir.exists() || !config_dir.is_dir() {
+    let bin_dir = cwd.join(".local").join("bin");
+
+    let has_config_dir = config_dir.exists() && config_dir.is_dir();
+    let has_bin_dir = bin_dir.exists() && bin_dir.is_dir();
+
+    if !has_config_dir && !has_bin_dir {
         return Err(anyhow!(
             "No .config directory found in current directory. Please run this command from your dotfiles repository root."
         ));
     }
 
-    // Check if the package exists in .config
-    let package_source = config_dir.join(&args.package);
-    if !package_source.exists() {
+    // Resolve package source and target: prefer .config/<package>, fall back to .local/bin/<package>
+    let config_source = config_dir.join(&args.package);
+    let bin_source = bin_dir.join(&args.package);
+
+    let (package_source, target_dir) = if has_config_dir && config_source.exists() {
+        (config_source, get_xdg_config_home()?)
+    } else if has_bin_dir && bin_source.exists() {
+        (bin_source, get_xdg_bin_home()?)
+    } else if has_config_dir {
         return Err(anyhow!(
             "Package '{}' not found in .config directory",
             args.package
         ));
-    }
+    } else {
+        return Err(anyhow!(
+            "Package '{}' not found in .local/bin",
+            args.package
+        ));
+    };
 
-    // Resolve target directory (XDG_CONFIG_HOME or $HOME/.config)
-    let target_dir = get_xdg_config_home()?;
     if !target_dir.exists() {
         fs::create_dir_all(&target_dir).context("Failed to create target directory")?;
     }

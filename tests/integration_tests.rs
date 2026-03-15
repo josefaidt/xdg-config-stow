@@ -596,3 +596,172 @@ fn test_no_migration_when_not_needed() {
     assert!(!stdout.contains("Migrating"));
     assert!(stdout.contains("Already linked"));
 }
+
+#[test]
+fn test_stow_bin_file() {
+    let temp = TempDir::new().unwrap();
+    let dotfiles = temp.path().join("dotfiles");
+    let bin_target = temp.path().join("local_bin");
+
+    // Setup .local/bin with a script
+    fs::create_dir_all(dotfiles.join(".local/bin")).unwrap();
+    fs::write(dotfiles.join(".local/bin/my-script"), "#!/bin/sh\necho hello").unwrap();
+
+    // Also create .config so the tool doesn't error on missing config dir
+    fs::create_dir_all(dotfiles.join(".config")).unwrap();
+
+    let output = Command::new(get_binary_path())
+        .arg("my-script")
+        .current_dir(&dotfiles)
+        .env("XDG_DATA_HOME", bin_target.join("share"))
+        .output()
+        .unwrap();
+
+    assert!(output.status.success(), "Stow bin failed: {:?}", output);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("Successfully stowed package 'my-script'"));
+
+    // Verify symlink was created at $bin_target/my-script
+    assert!(bin_target.join("bin/my-script").is_symlink());
+    let link = fs::read_link(bin_target.join("bin/my-script")).unwrap();
+    let link_canonical = link.canonicalize().unwrap();
+    let expected = dotfiles.join(".local/bin/my-script").canonicalize().unwrap();
+    assert_eq!(link_canonical, expected);
+}
+
+#[test]
+fn test_remove_bin_file() {
+    let temp = TempDir::new().unwrap();
+    let dotfiles = temp.path().join("dotfiles");
+    let bin_target = temp.path().join("local_bin");
+
+    fs::create_dir_all(dotfiles.join(".local/bin")).unwrap();
+    fs::write(dotfiles.join(".local/bin/my-script"), "#!/bin/sh").unwrap();
+    fs::create_dir_all(dotfiles.join(".config")).unwrap();
+
+    // Stow first
+    let output = Command::new(get_binary_path())
+        .arg("my-script")
+        .current_dir(&dotfiles)
+        .env("XDG_DATA_HOME", bin_target.join("share"))
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    assert!(bin_target.join("bin/my-script").is_symlink());
+
+    // Remove
+    let output = Command::new(get_binary_path())
+        .arg("--rm")
+        .arg("my-script")
+        .current_dir(&dotfiles)
+        .env("XDG_DATA_HOME", bin_target.join("share"))
+        .output()
+        .unwrap();
+
+    assert!(output.status.success(), "Remove bin failed: {:?}", output);
+    assert!(!bin_target.join("bin/my-script").exists());
+}
+
+#[test]
+fn test_stow_bin_already_linked() {
+    let temp = TempDir::new().unwrap();
+    let dotfiles = temp.path().join("dotfiles");
+    let bin_target = temp.path().join("local_bin");
+
+    fs::create_dir_all(dotfiles.join(".local/bin")).unwrap();
+    fs::write(dotfiles.join(".local/bin/my-script"), "#!/bin/sh").unwrap();
+    fs::create_dir_all(dotfiles.join(".config")).unwrap();
+
+    // Stow twice - should be idempotent
+    for _ in 0..2 {
+        let output = Command::new(get_binary_path())
+            .arg("my-script")
+            .current_dir(&dotfiles)
+            .env("XDG_DATA_HOME", bin_target.join("share"))
+            .output()
+            .unwrap();
+        assert!(output.status.success());
+    }
+
+    // Second stow should report already linked
+    let output = Command::new(get_binary_path())
+        .arg("my-script")
+        .current_dir(&dotfiles)
+        .env("XDG_DATA_HOME", bin_target.join("share"))
+        .output()
+        .unwrap();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("Already linked"));
+}
+
+#[test]
+fn test_xdg_data_home_bin_resolution() {
+    let temp = TempDir::new().unwrap();
+    let dotfiles = temp.path().join("dotfiles");
+    let custom_data = temp.path().join("custom_data");
+
+    fs::create_dir_all(dotfiles.join(".local/bin")).unwrap();
+    fs::write(dotfiles.join(".local/bin/tool"), "#!/bin/sh").unwrap();
+    fs::create_dir_all(dotfiles.join(".config")).unwrap();
+
+    // XDG_DATA_HOME=/custom_data/share → bin dir should be /custom_data/bin
+    let output = Command::new(get_binary_path())
+        .arg("tool")
+        .current_dir(&dotfiles)
+        .env("XDG_DATA_HOME", custom_data.join("share"))
+        .output()
+        .unwrap();
+
+    assert!(output.status.success(), "Stow failed: {:?}", output);
+    assert!(custom_data.join("bin/tool").is_symlink());
+}
+
+#[test]
+fn test_bin_preferred_when_config_package_missing() {
+    // Package found in .local/bin but not .config → should use bin
+    let temp = TempDir::new().unwrap();
+    let dotfiles = temp.path().join("dotfiles");
+    let bin_target = temp.path().join("local_bin");
+
+    fs::create_dir_all(dotfiles.join(".config")).unwrap();
+    fs::create_dir_all(dotfiles.join(".local/bin")).unwrap();
+    fs::write(dotfiles.join(".local/bin/update-dots"), "#!/bin/sh").unwrap();
+
+    let output = Command::new(get_binary_path())
+        .arg("update-dots")
+        .current_dir(&dotfiles)
+        .env("XDG_DATA_HOME", bin_target.join("share"))
+        .output()
+        .unwrap();
+
+    assert!(output.status.success(), "Stow failed: {:?}", output);
+    assert!(bin_target.join("bin/update-dots").is_symlink());
+}
+
+#[test]
+fn test_config_takes_priority_over_bin() {
+    // Package found in both .config and .local/bin → should use .config
+    let temp = TempDir::new().unwrap();
+    let dotfiles = temp.path().join("dotfiles");
+    let config_target = temp.path().join("config_target");
+    let bin_target = temp.path().join("local_bin");
+
+    fs::create_dir_all(dotfiles.join(".config/fish")).unwrap();
+    fs::write(dotfiles.join(".config/fish/config.fish"), "# fish").unwrap();
+    fs::create_dir_all(dotfiles.join(".local/bin")).unwrap();
+    fs::write(dotfiles.join(".local/bin/fish"), "#!/bin/sh").unwrap();
+
+    let output = Command::new(get_binary_path())
+        .arg("fish")
+        .current_dir(&dotfiles)
+        .env("XDG_CONFIG_HOME", &config_target)
+        .env("XDG_DATA_HOME", bin_target.join("share"))
+        .output()
+        .unwrap();
+
+    assert!(output.status.success(), "Stow failed: {:?}", output);
+    // Should have stowed the config package, not the bin
+    assert!(config_target.join("fish").is_symlink());
+    // Bin should NOT have been touched
+    assert!(!bin_target.join("bin/fish").exists());
+}

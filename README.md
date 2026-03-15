@@ -5,6 +5,7 @@ An [XDG](https://specifications.freedesktop.org/basedir/latest/)-centric GNU sto
 ## Features
 
 - Smart symlinking of dotfiles from a `.config/` directory to `XDG_CONFIG_HOME` (or `$HOME/.config`)
+- Support for user-generated scripts from `.local/bin/` to `$HOME/.local/bin` (derived from `XDG_DATA_HOME`)
 - Support for `.stowignore` files using gitignore-style patterns
 - Easy removal of stowed packages with the `--rm` flag
 - Safe operation - verifies symlinks before removal
@@ -26,9 +27,9 @@ cargo build --release
 
 ## Usage
 
-Run `xdg-config-stow` from your dotfiles repository root (the directory containing `.config/`).
+Run `xdg-config-stow` from your dotfiles repository root (the directory containing `.config/` and/or `.local/bin/`).
 
-### Stow a package
+### Stow a config package
 
 Link all files from `.config/fish` to `$HOME/.config/fish`:
 
@@ -36,12 +37,23 @@ Link all files from `.config/fish` to `$HOME/.config/fish`:
 xdg-config-stow fish
 ```
 
+### Stow a user script
+
+Link a script from `.local/bin/my-script` to `$HOME/.local/bin/my-script`:
+
+```bash
+xdg-config-stow my-script
+```
+
+The tool first looks for the package in `.config/`, then falls back to `.local/bin/`. The bin target directory is derived from `XDG_DATA_HOME` (defaulting to `$HOME/.local/bin`).
+
 ### Remove a stowed package
 
 Remove symlinks for a previously stowed package:
 
 ```bash
 xdg-config-stow --rm fish
+xdg-config-stow --rm my-script
 ```
 
 ### Dry run mode
@@ -96,17 +108,24 @@ my-dotfiles-repo/
     nvim/
       init.lua
       lua/
+  .local/
+    bin/
+      my-script
+      update-dots
   README.md
   setup.sh
 ```
 
 ## How it works
 
-1. Detects the `.config/` directory in your current working directory
-2. Resolves the target directory using `XDG_CONFIG_HOME` or falls back to `$HOME/.config`
-3. Creates symlinks for all files in the specified package
-4. Respects `.stowignore` files for excluding specific paths
-5. Safely verifies symlink targets when removing packages
+1. Detects `.config/` and/or `.local/bin/` in your current working directory
+2. For config packages: resolves target using `XDG_CONFIG_HOME` or falls back to `$HOME/.config`
+3. For bin scripts: resolves target using the parent of `XDG_DATA_HOME` joined with `bin`, or falls back to `$HOME/.local/bin`
+4. Creates symlinks for all files in the specified package
+5. Respects `.stowignore` files for excluding specific paths
+6. Safely verifies symlink targets when removing packages
+
+When both `.config/<name>` and `.local/bin/<name>` exist, the config package takes priority.
 
 ## Requirements
 
@@ -135,13 +154,14 @@ See [TESTS.md](TESTS.md) for detailed test coverage information.
 
 ### Test Coverage
 
-- **23 total tests** covering:
+- **29 total tests** covering:
   - Core stowing/unstowing functionality
   - .stowignore pattern matching
   - Error handling and edge cases
   - XDG_CONFIG_HOME resolution
   - Complex directory structures
   - **Automatic migration safety** (6 dedicated safety tests)
+  - **Bin support** (6 dedicated tests)
 
 ## Contributing
 
