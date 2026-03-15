@@ -5,8 +5,9 @@ An [XDG](https://specifications.freedesktop.org/basedir/latest/)-centric GNU sto
 ## Features
 
 - Smart symlinking of dotfiles from a `.config/` directory to `XDG_CONFIG_HOME` (or `$HOME/.config`)
+- Support for both package directories (e.g. `fish`) and single files (e.g. `starship.toml`)
 - Support for `.stowignore` files using gitignore-style patterns
-- Easy removal of stowed packages with the `--rm` flag
+- Easy removal of stowed packages and files with the `--rm` flag
 - Safe operation - verifies symlinks before removal
 
 ## Installation
@@ -36,12 +37,21 @@ Link all files from `.config/fish` to `$HOME/.config/fish`:
 xdg-config-stow fish
 ```
 
-### Remove a stowed package
+### Stow a single file
 
-Remove symlinks for a previously stowed package:
+Link a single file from `.config/starship.toml` to `$HOME/.config/starship.toml`:
+
+```bash
+xdg-config-stow starship.toml
+```
+
+### Remove a stowed file or package
+
+Remove symlinks for a previously stowed package or single file:
 
 ```bash
 xdg-config-stow --rm fish
+xdg-config-stow --rm starship.toml
 ```
 
 ### Dry run mode
@@ -104,9 +114,10 @@ my-dotfiles-repo/
 
 1. Detects the `.config/` directory in your current working directory
 2. Resolves the target directory using `XDG_CONFIG_HOME` or falls back to `$HOME/.config`
-3. Creates symlinks for all files in the specified package
-4. Respects `.stowignore` files for excluding specific paths
-5. Safely verifies symlink targets when removing packages
+3. If the argument is a **file** (e.g. `starship.toml`), creates a single symlink: `.config/starship.toml` → `$HOME/.config/starship.toml`
+4. If the argument is a **directory** (e.g. `fish`), creates symlinks for all files in the package
+5. Respects `.stowignore` files for excluding specific paths (packages only)
+6. Safely verifies symlink targets when removing packages or files
 
 ## Requirements
 
@@ -135,7 +146,7 @@ See [TESTS.md](TESTS.md) for detailed test coverage information.
 
 ### Test Coverage
 
-- **23 total tests** covering:
+- **26 total tests** covering:
   - Core stowing/unstowing functionality
   - .stowignore pattern matching
   - Error handling and edge cases

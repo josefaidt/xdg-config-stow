@@ -35,7 +35,8 @@ cargo test -- --nocapture  # with output
 ## Key Behaviors
 
 - Symlinks files from `.config/<package>/` into `XDG_CONFIG_HOME` (or `$HOME/.config`)
-- Respects `.stowignore` files (gitignore-style patterns) per package
+- Supports single files: `.config/starship.toml` → `$HOME/.config/starship.toml` when argument is a file
+- Respects `.stowignore` files (gitignore-style patterns) per package (directories only)
 - `--rm` flag safely removes stowed symlinks and cleans up empty directories
-- Idempotent: re-stowing an already-linked package is safe
+- Idempotent: re-stowing an already-linked package or file is safe
 - Will not overwrite existing non-symlink files

@@ -548,6 +548,124 @@ fn stow_directory_contents(
     Ok(())
 }
 
+/// Stow a single file by creating a symlink from source to target
+pub fn stow_single_file(source: &Path, target: &Path, dry_run: bool) -> Result<()> {
+    let file_name = source
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("file");
+
+    // Check if already correctly symlinked
+    if target.is_symlink() {
+        if let Ok(existing_link) = fs::read_link(target) {
+            if existing_link == source {
+                println!("Already linked: {}", file_name);
+                return Ok(());
+            }
+            eprintln!(
+                "\n❌ Cannot stow '{}' - symlink exists pointing to: {}\n",
+                file_name,
+                existing_link.display()
+            );
+            eprintln!("To resolve this issue, you can:\n");
+            eprintln!("  1. Remove the existing symlink:");
+            eprintln!("     rm ~/.config/{}", file_name);
+            eprintln!("     xdg-config-stow {}\n", file_name);
+            return Err(anyhow!("Conflicting symlink exists"));
+        }
+    }
+
+    // Check if target exists as a real file
+    if target.exists() {
+        eprintln!(
+            "\n❌ Cannot stow '{}' - file exists (not a symlink)\n",
+            file_name
+        );
+        eprintln!("To resolve this issue, you can:\n");
+        eprintln!("  1. Back up and remove the existing file:");
+        eprintln!(
+            "     mv ~/.config/{} ~/.config/{}.backup",
+            file_name, file_name
+        );
+        eprintln!("     xdg-config-stow {}\n", file_name);
+        return Err(anyhow!("Target file exists"));
+    }
+
+    // Create parent directory if needed
+    if let Some(parent) = target.parent()
+        && !parent.exists()
+    {
+        if dry_run {
+            println!(
+                "{} {}",
+                "+".green(),
+                format!("mkdir {}", parent.display()).dimmed()
+            );
+        } else {
+            fs::create_dir_all(parent).context("Failed to create parent directory")?;
+        }
+    }
+
+    if dry_run {
+        println!(
+            "{} {} -> {}",
+            "+".green(),
+            file_name.bright_green(),
+            source.display().to_string().dimmed()
+        );
+    } else {
+        #[cfg(unix)]
+        std::os::unix::fs::symlink(source, target).context(format!(
+            "Failed to create symlink: {}",
+            target.display()
+        ))?;
+
+        #[cfg(windows)]
+        std::os::windows::fs::symlink_file(source, target)?;
+
+        println!("Linked: {}", file_name);
+    }
+
+    Ok(())
+}
+
+/// Remove a stowed single file by deleting the symlink if it points to source
+pub fn remove_single_file(source: &Path, target: &Path, dry_run: bool) -> Result<()> {
+    let file_name = source
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("file");
+
+    if !target.exists() && !target.is_symlink() {
+        return Err(anyhow!(
+            "Target file does not exist: {}",
+            target.display()
+        ));
+    }
+
+    if target.is_symlink() {
+        let link_target = fs::read_link(target)?;
+        if link_target == source {
+            if dry_run {
+                println!("{} {}", "-".red(), file_name.bright_red());
+            } else {
+                fs::remove_file(target).context(format!(
+                    "Failed to remove symlink: {}",
+                    target.display()
+                ))?;
+                println!("Removed: {}", file_name);
+            }
+            return Ok(());
+        }
+        return Err(anyhow!(
+            "Target symlink does not point to source: {}",
+            target.display()
+        ));
+    }
+
+    Err(anyhow!("Target is not a symlink: {}", target.display()))
+}
+
 /// Remove a stowed package by deleting symlinks that point to source
 pub fn remove_package(
     source: &Path,

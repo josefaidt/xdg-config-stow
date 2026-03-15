@@ -405,6 +405,116 @@ fn test_xdg_config_home_resolution() {
 }
 
 #[test]
+fn test_stow_and_remove_single_file() {
+    let temp = TempDir::new().unwrap();
+    let dotfiles = temp.path().join("dotfiles");
+    let target = temp.path().join("target");
+
+    // Setup single file in .config
+    fs::create_dir_all(dotfiles.join(".config")).unwrap();
+    fs::write(dotfiles.join(".config/starship.toml"), "# starship config").unwrap();
+
+    // Stow the single file
+    let output = Command::new(get_binary_path())
+        .arg("starship.toml")
+        .current_dir(&dotfiles)
+        .env("XDG_CONFIG_HOME", &target)
+        .output()
+        .unwrap();
+
+    assert!(output.status.success(), "Stow command failed: {:?}", output);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("Successfully stowed 'starship.toml'"));
+
+    // Verify file is symlinked
+    assert!(target.join("starship.toml").is_symlink());
+    let link = fs::read_link(target.join("starship.toml")).unwrap();
+    let link_canonical = link.canonicalize().unwrap();
+    let expected_canonical = dotfiles
+        .join(".config/starship.toml")
+        .canonicalize()
+        .unwrap();
+    assert_eq!(link_canonical, expected_canonical);
+
+    // Remove the single file
+    let output = Command::new(get_binary_path())
+        .arg("--rm")
+        .arg("starship.toml")
+        .current_dir(&dotfiles)
+        .env("XDG_CONFIG_HOME", &target)
+        .output()
+        .unwrap();
+
+    assert!(
+        output.status.success(),
+        "Remove command failed: {:?}",
+        output
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("Successfully removed 'starship.toml'"));
+
+    // Verify symlink was removed
+    assert!(!target.join("starship.toml").exists());
+}
+
+#[test]
+fn test_stow_single_file_already_linked() {
+    let temp = TempDir::new().unwrap();
+    let dotfiles = temp.path().join("dotfiles");
+    let target = temp.path().join("target");
+
+    fs::create_dir_all(dotfiles.join(".config")).unwrap();
+    fs::write(dotfiles.join(".config/starship.toml"), "# starship").unwrap();
+
+    // Stow once
+    let output = Command::new(get_binary_path())
+        .arg("starship.toml")
+        .current_dir(&dotfiles)
+        .env("XDG_CONFIG_HOME", &target)
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+
+    // Stow again - should be idempotent
+    let output = Command::new(get_binary_path())
+        .arg("starship.toml")
+        .current_dir(&dotfiles)
+        .env("XDG_CONFIG_HOME", &target)
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("Already linked: starship.toml"));
+}
+
+#[test]
+fn test_stow_single_file_target_exists_error() {
+    let temp = TempDir::new().unwrap();
+    let dotfiles = temp.path().join("dotfiles");
+    let target = temp.path().join("target");
+
+    fs::create_dir_all(dotfiles.join(".config")).unwrap();
+    fs::write(dotfiles.join(".config/starship.toml"), "# starship").unwrap();
+
+    // Create existing file in target
+    fs::create_dir_all(&target).unwrap();
+    fs::write(target.join("starship.toml"), "existing content").unwrap();
+
+    // Try to stow - should fail
+    let output = Command::new(get_binary_path())
+        .arg("starship.toml")
+        .current_dir(&dotfiles)
+        .env("XDG_CONFIG_HOME", &target)
+        .output()
+        .unwrap();
+
+    assert!(!output.status.success());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("file exists"));
+}
+
+#[test]
 fn test_migration_safety_wrong_symlink() {
     // Test that migration only happens when symlink points to correct source
     let temp = TempDir::new().unwrap();

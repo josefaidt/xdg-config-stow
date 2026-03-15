@@ -2,7 +2,10 @@ use anyhow::{Context, Result, anyhow};
 use clap::Parser;
 use colored::Colorize;
 use std::fs;
-use xdg_config_stow::{get_xdg_config_home, load_ignore_rules, remove_package, stow_package};
+use xdg_config_stow::{
+    get_xdg_config_home, load_ignore_rules, remove_package, remove_single_file, stow_package,
+    stow_single_file,
+};
 
 #[derive(Parser, Debug)]
 #[command(name = "xdg-config-stow")]
@@ -51,32 +54,47 @@ fn main() -> Result<()> {
 
     let target_package = target_dir.join(&args.package);
 
-    // Load ignore rules if .stowignore exists
-    let gitignore = load_ignore_rules(&package_source)?;
-
     if args.dry_run {
         println!("{}\n", "DRY RUN: No changes will be made".yellow().bold());
     }
 
-    if args.rm {
-        remove_package(
-            &package_source,
-            &target_package,
-            gitignore.as_ref(),
-            args.dry_run,
-        )?;
-        if !args.dry_run {
-            println!("Successfully removed package '{}'", args.package);
+    if package_source.is_file() {
+        // Single-file mode: .config/starship.toml -> $XDG_CONFIG_HOME/starship.toml
+        if args.rm {
+            remove_single_file(&package_source, &target_package, args.dry_run)?;
+            if !args.dry_run {
+                println!("Successfully removed '{}'", args.package);
+            }
+        } else {
+            stow_single_file(&package_source, &target_package, args.dry_run)?;
+            if !args.dry_run {
+                println!("Successfully stowed '{}'", args.package);
+            }
         }
     } else {
-        stow_package(
-            &package_source,
-            &target_package,
-            gitignore.as_ref(),
-            args.dry_run,
-        )?;
-        if !args.dry_run {
-            println!("Successfully stowed package '{}'", args.package);
+        // Package (directory) mode
+        let gitignore = load_ignore_rules(&package_source)?;
+
+        if args.rm {
+            remove_package(
+                &package_source,
+                &target_package,
+                gitignore.as_ref(),
+                args.dry_run,
+            )?;
+            if !args.dry_run {
+                println!("Successfully removed package '{}'", args.package);
+            }
+        } else {
+            stow_package(
+                &package_source,
+                &target_package,
+                gitignore.as_ref(),
+                args.dry_run,
+            )?;
+            if !args.dry_run {
+                println!("Successfully stowed package '{}'", args.package);
+            }
         }
     }
 

@@ -32,7 +32,7 @@ cargo test test_stow_single_file
 
 ### Integration Tests (tests/integration_tests.rs)
 
-**15 tests** testing the CLI end-to-end:
+**18 tests** testing the CLI end-to-end:
 
 #### Basic Functionality
 1. `test_missing_config_directory` - Error handling when .config doesn't exist
@@ -45,20 +45,25 @@ cargo test test_stow_single_file
 8. `test_complex_directory_structure` - Deeply nested directory structures
 9. `test_xdg_config_home_resolution` - Custom XDG_CONFIG_HOME handling
 
+#### Single-File Support
+10. `test_stow_and_remove_single_file` - Full workflow of stowing and removing a single file (e.g. `starship.toml`)
+11. `test_stow_single_file_already_linked` - Idempotent stowing of a single file
+12. `test_stow_single_file_target_exists_error` - Error when target file already exists
+
 #### Automatic Migration Tests (Safety-Critical)
-10. `test_directory_symlink_migration` - Auto-migration from package symlink to individual symlinks when .stowignore is added
-11. `test_directory_to_file_symlinks_migration` - Migration with subdirectory ignore rules
-12. `test_migration_safety_wrong_symlink` - **Safety**: Ensures migration ONLY happens when symlink points to correct source
-13. `test_migration_with_conflicting_file` - **Safety**: Detects conflicts when target directory exists (not a symlink)
-14. `test_migration_preserves_correct_symlinks` - **Safety**: Verifies all symlinks are correctly created after migration
-15. `test_no_migration_when_not_needed` - **Safety**: Ensures no migration attempt when target isn't a package symlink
+13. `test_directory_symlink_migration` - Auto-migration from package symlink to individual symlinks when .stowignore is added
+14. `test_directory_to_file_symlinks_migration` - Migration with subdirectory ignore rules
+15. `test_migration_safety_wrong_symlink` - **Safety**: Ensures migration ONLY happens when symlink points to correct source
+16. `test_migration_with_conflicting_file` - **Safety**: Detects conflicts when target directory exists (not a symlink)
+17. `test_migration_preserves_correct_symlinks` - **Safety**: Verifies all symlinks are correctly created after migration
+18. `test_no_migration_when_not_needed` - **Safety**: Ensures no migration attempt when target isn't a package symlink
 
 ## Test Results
 
 ```
 Unit tests:      8 passed
-Integration:    15 passed
-Total:          23 passed
+Integration:    18 passed
+Total:          26 passed
 ```
 
 ## What's Tested
@@ -69,6 +74,7 @@ Total:          23 passed
 - ✅ Removing symlinks
 - ✅ Cleaning up empty directories
 - ✅ XDG_CONFIG_HOME environment variable resolution
+- ✅ Single-file stowing and removal (e.g. `starship.toml`)
 
 ### .stowignore Support
 - ✅ Ignoring individual files
